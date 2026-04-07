@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spisesteder i Trondheim</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; }
+
+    header {
+      padding: 16px 24px;
+      background: #16213e;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+    header h1 { font-size: 1.3rem; font-weight: 600; }
+    header span { font-size: 0.9rem; color: #a0a8c0; }
+
+    #map { height: calc(100vh - 60px); }
+
+    .leaflet-popup-content-wrapper {
+      background: #16213e;
+      color: #eee;
+      border-radius: 10px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    .leaflet-popup-tip { background: #16213e; }
+
+    .popup-inner h2 { font-size: 1rem; margin-bottom: 4px; }
+    .popup-inner .type { font-size: 0.75rem; color: #7ec8e3; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .popup-inner p { font-size: 0.85rem; color: #ccc; margin-bottom: 6px; }
+    .popup-inner .meta { display: flex; gap: 10px; font-size: 0.8rem; }
+    .popup-inner .meta span { background: #0f3460; padding: 2px 8px; border-radius: 20px; }
+
+    .legend {
+      position: absolute;
+      bottom: 30px;
+      right: 10px;
+      z-index: 1000;
+      background: #16213e;
+      border-radius: 10px;
+      padding: 12px 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      font-size: 0.82rem;
+    }
+    .legend h3 { margin-bottom: 8px; font-size: 0.85rem; color: #a0a8c0; }
+    .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .legend-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Spisesteder i Trondheim</h1>
+    <span>Forslag til lunsj eller middag i morgen</span>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<div class="legend">
+  <h3>Kategori</h3>
+  <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div> Restaurant</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f5a623"></div> Kafe</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#50fa7b"></div> Burger / Street food</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#bd93f9"></div> Sushi / Asia</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#8be9fd"></div> Pizza</div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([63.4305, 10.3951], 14);
+
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    maxZoom: 19
+  }).addTo(map);
+
+  const colors = {
+    restaurant: '#e94560',
+    kafe:       '#f5a623',
+    burger:     '#50fa7b',
+    sushi:      '#bd93f9',
+    pizza:      '#8be9fd'
+  };
+
+  function makeIcon(type) {
+    const color = colors[type] || '#fff';
+    return L.divIcon({
+      className: '',
+      html: `<div style="
+        width:18px; height:18px; border-radius:50%;
+        background:${color}; border:2px solid #fff;
+        box-shadow:0 0 6px ${color}99;
+      "></div>`,
+      iconSize: [18, 18],
+      iconAnchor: [9, 9],
+      popupAnchor: [0, -12]
+    });
+  }
+
+  const steder = [
+    {
+      navn: "Credo",
+      type: "restaurant",
+      lat: 63.4318, lng: 10.4012,
+      beskrivelse: "Nordisk gourmetrestaurant, kjent for sesongens råvarer.",
+      pris: "💰💰💰",
+      tid: "12:00–22:00"
+    },
+    {
+      navn: "Baklandet Skydsstation",
+      type: "kafe",
+      lat: 63.4289, lng: 10.4071,
+      beskrivelse: "Koselig kafe i historisk omgivelse ved Nidelva.",
+      pris: "💰",
+      tid: "11:00–21:00"
+    },
+    {
+      navn: "To Rom og Kjøkken",
+      type: "restaurant",
+      lat: 63.4342, lng: 10.3978,
+      beskrivelse: "Moderne norsk mat i hyggelige lokaler.",
+      pris: "💰💰",
+      tid: "15:00–22:00"
+    },
+    {
+      navn: "Egon Trondheim",
+      type: "restaurant",
+      lat: 63.4299, lng: 10.3931,
+      beskrivelse: "Allsidig meny, god for grupper.",
+      pris: "💰💰",
+      tid: "11:00–22:00"
+    },
+    {
+      navn: "Ramp Burger",
+      type: "burger",
+      lat: 63.4321, lng: 10.3899,
+      beskrivelse: "Populær burgerjoint med lokale ingredienser.",
+      pris: "💰💰",
+      tid: "11:00–21:00"
+    },
+    {
+      navn: "Dromedar Kaffebar",
+      type: "kafe",
+      lat: 63.4308, lng: 10.3955,
+      beskrivelse: "Trondheims eldste spesialkaffebar.",
+      pris: "💰",
+      tid: "08:00–18:00"
+    },
+    {
+      navn: "Sabi Omakase",
+      type: "sushi",
+      lat: 63.4331, lng: 10.4001,
+      beskrivelse: "Japansk omakase-opplevelse av høy klasse.",
+      pris: "💰💰💰",
+      tid: "17:00–22:00"
+    },
+    {
+      navn: "Wok & Roll",
+      type: "sushi",
+      lat: 63.4275, lng: 10.3943,
+      beskrivelse: "Asiatisk fusionmat, rask servering.",
+      pris: "💰",
+      tid: "11:00–21:00"
+    },
+    {
+      navn: "Peppes Pizza Trondheim",
+      type: "pizza",
+      lat: 63.4313, lng: 10.3867,
+      beskrivelse: "Klassisk norsk pizzakjede med god variasjon.",
+      pris: "💰💰",
+      tid: "11:00–22:00"
+    },
+    {
+      navn: "Trondheim Micro Bryggeri",
+      type: "restaurant",
+      lat: 63.4356, lng: 10.3991,
+      beskrivelse: "Husbrygget øl og god pubmat i sentrum.",
+      pris: "💰💰",
+      tid: "14:00–01:00"
+    },
+    {
+      navn: "Bror",
+      type: "restaurant",
+      lat: 63.4295, lng: 10.4022,
+      beskrivelse: "Liten restaurant med stor smak, hyggelig stemning.",
+      pris: "💰💰",
+      tid: "16:00–22:00"
+    },
+    {
+      navn: "Tuk Tuk Thai",
+      type: "sushi",
+      lat: 63.4265, lng: 10.3971,
+      beskrivelse: "Autentisk thai-mat i hyggelige omgivelser.",
+      pris: "💰",
+      tid: "11:00–21:00"
+    }
+  ];
+
+  steder.forEach(s => {
+    const marker = L.marker([s.lat, s.lng], { icon: makeIcon(s.type) }).addTo(map);
+    marker.bindPopup(`
+      <div class="popup-inner">
+        <h2>${s.navn}</h2>
+        <div class="type">${s.type}</div>
+        <p>${s.beskrivelse}</p>
+        <div class="meta">
+          <span>${s.pris}</span>
+          <span>${s.tid}</span>
+        </div>
+      </div>
+    `);
+  });
+</script>
+</body>
+</html>
